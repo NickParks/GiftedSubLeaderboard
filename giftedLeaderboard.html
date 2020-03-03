@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Fredoka+One&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fredoka One', cursive;
+            padding: 0;
+            margin: 0;
+            background-color: rgba(0, 0, 0, 0);
+            width: 400px;
+        }
+
+        #leaderboard {
+            width: 100%;
+        }
+
+        #leaderboard td {
+            font-size: 30px;
+            line-height: 36px;
+            padding: 5px 5px;
+            border-style: none;
+            border-width: 2px;
+            word-break: normal;
+            vertical-align: middle;
+            text-align: left;
+        }
+
+        img {
+            border-radius: 50%;
+            display: inline-block;
+            padding-right: 6px;
+        }
+
+        h1 {
+            vertical-align: middle;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body id="leaderboardBody">
+    <h1>Gifted Sub Leaderboard</h1>
+    <table id="leaderboard">
+
+    </table>
+
+    <script>
+        async function start() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('channel') == undefined) {
+                document.write("No channel provided. Please include a channel in the URL");
+            }
+
+            var channelId = -1;
+
+            if (isNaN(params.get('channel'))) {
+                let idRequest = await fetch(`https://mixer.com/api/v1/channels/${params.get('channel')}?fields=id`);
+                let id = await idRequest.json();
+                channelId = id.id;
+            }
+
+            if (params.get("textColor") != undefined) {
+                document.getElementById("leaderboardBody").style.color = params.get("textColor");
+            }
+
+            grabData(channelId);
+
+            setInterval(() => {
+                grabData(channelId);
+            }, 1000 * 10);
+        }
+
+        async function grabData(channelId) {
+            let dataRequest = await fetch(`https://mixerstats.com/api/channel/giftedSubs/${channelId}`);
+            let data = await dataRequest.json();
+
+            var totalGiftedSubs = [];
+
+            for (let x = 0; x < data.length; x++) {
+                let user = totalGiftedSubs.find(gifter => gifter.id === data[x].gifter_id);
+                if (user == undefined) {
+                    totalGiftedSubs.push({
+                        id: data[x].gifter_id,
+                        name: data[x].gifter_name,
+                        total: 1
+                    });
+                } else {
+                    user.total++;
+                }
+            }
+
+            totalGiftedSubs = totalGiftedSubs.sort((a, b) => {
+                return a.total - b.total;
+            });
+
+            var table = document.getElementById("leaderboard");
+            table.innerHTML = "";
+
+            totalGiftedSubs.forEach((gifter) => {
+                let row = table.insertRow(0);
+                let gifterCell = row.insertCell(0);
+                gifterCell.innerHTML = `<img src="https://mixer.com/api/v1/users/${gifter.id}/avatar" width="32px" height="32px" />&nbsp;<span class="username">${gifter.name}</span>`;
+
+                let totalCell = row.insertCell(1);
+                totalCell.innerHTML = gifter.total;
+            });
+        }
+
+        start();
+    </script>
+</body>
+
+</html>
